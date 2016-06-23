@@ -4,17 +4,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import android.app.UiAutomation;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.filters.SdkSuppress;
 import android.support.test.runner.AndroidJUnit4;
-import android.support.test.uiautomator.BySelector;
 import android.support.test.uiautomator.UiAutomatorInstrumentationTestRunner;
 import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.By;
@@ -22,8 +19,6 @@ import android.support.test.uiautomator.UiObject;
 import android.support.test.uiautomator.UiObjectNotFoundException;
 import android.support.test.uiautomator.UiSelector;
 import android.support.test.uiautomator.Until;
-import android.view.View;
-import android.widget.CheckBox;
 import android.widget.EditText;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -38,7 +33,8 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 
     private static final String GOOGLE_PLAY_PACKAGE
             = "com.android.vending";
-    private static final int LAUNCH_TIMEOUT = 10000;
+    private static final int MIDDLE_TIMEOUT = 10000;
+    private static final int LONG_TIMEOUT = 15000;
     private static final int TIMEOUT = 2000;
     private static final String STRING_TO_BE_TYPED = "UiAutomator";
     private UiDevice mDevice;
@@ -84,7 +80,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 
         final String launcherPackage = getLauncherPackageName();
         assertThat(launcherPackage, notNullValue());
-        mDevice.wait(Until.hasObject(By.pkg(launcherPackage).depth(0)), LAUNCH_TIMEOUT);
+        mDevice.wait(Until.hasObject(By.pkg(launcherPackage).depth(0)), MIDDLE_TIMEOUT);
 
         Context context = InstrumentationRegistry.getContext();
         final Intent intent = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
@@ -92,7 +88,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         context.startActivity(intent);
 
         // Wait for the app to appear
-        mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), LAUNCH_TIMEOUT);
+        mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
         Thread.sleep(TIMEOUT);
 
         UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).description("Enter your email "));
@@ -101,7 +97,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         UiObject nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
         nextButton.click();
 
-        mDevice.wait(Until.findObject(By.desc("Password ")), LAUNCH_TIMEOUT);
+        mDevice.wait(Until.findObject(By.desc("Password ")), MIDDLE_TIMEOUT);
         Thread.sleep(TIMEOUT);
         textView = mDevice.findObject(new UiSelector().className(EditText.class).description("Password "));
         textView.click();
@@ -109,12 +105,12 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
         nextButton.click();
 
-        mDevice.wait(Until.findObject(By.desc("ACCEPT")), LAUNCH_TIMEOUT);
+        mDevice.wait(Until.findObject(By.desc("ACCEPT")), MIDDLE_TIMEOUT);
         Thread.sleep(TIMEOUT);
         nextButton = mDevice.findObject(new UiSelector().description("ACCEPT"));
         nextButton.click();
 
-        /*mDevice.wait(Until.findObject(By.desc("NEXT")), LAUNCH_TIMEOUT);
+        /*mDevice.wait(Until.findObject(By.desc("NEXT")), MIDDLE_TIMEOUT);
         mDevice.waitForIdle(2000);
         UiObject checkBoxAgree = mDevice.findObject(new UiSelector().className(CheckBox.class).resourceId("com.google.android.gms:id/agree_backup"));
         if (checkBoxAgree != null) {
@@ -125,7 +121,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
             nextButton.click();
         }*/
 
-        Thread.sleep(7*TIMEOUT);
+        Thread.sleep(LONG_TIMEOUT);
         mDevice.pressHome();
 
 //        Intent intent1 = new Intent(Intent.ACTION_VIEW);
@@ -133,8 +129,8 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 //        intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 //        context.startActivity(intent1);
         context.startActivity(intent);
-        mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), LAUNCH_TIMEOUT);
-
+        mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
+        Thread.sleep(MIDDLE_TIMEOUT);
         UiObject startedButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/play_onboard_center_button"));
         if (startedButton.exists()) {
             startedButton.click();
@@ -170,7 +166,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
             acceptButton.click();
         }
 
-        Thread.sleep(5*TIMEOUT);
+        Thread.sleep(LONG_TIMEOUT);
         UiObject openButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/launch_button"));
         if (openButton.exists()) {
             openButton.click();
