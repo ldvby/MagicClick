@@ -1,25 +1,36 @@
 package by.angellab.click.magicclick;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.os.Bundle;
+import android.net.Uri;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.filters.SdkSuppress;
 import android.support.test.runner.AndroidJUnit4;
+import android.support.test.uiautomator.By;
 import android.support.test.uiautomator.UiAutomatorInstrumentationTestRunner;
 import android.support.test.uiautomator.UiDevice;
-import android.support.test.uiautomator.By;
 import android.support.test.uiautomator.UiObject;
 import android.support.test.uiautomator.UiObjectNotFoundException;
 import android.support.test.uiautomator.UiSelector;
 import android.support.test.uiautomator.Until;
 import android.widget.EditText;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.util.concurrent.locks.Lock;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
@@ -38,51 +49,66 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
     private static final int TIMEOUT = 2000;
     private static final String STRING_TO_BE_TYPED = "UiAutomator";
     private UiDevice mDevice;
+    private String login = "test.hiqo";
+    private String pass = "hiqo121212";
+    private Context context;
+
+    private boolean canBeEnded = false;
 
     @Before
     public void startMainActivityFromHomeScreen() {
         mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
-
+        context = InstrumentationRegistry.getContext();
         // Start from the home screen
         mDevice.pressHome();
     }
 
     @Test
-    public void test() throws UiObjectNotFoundException, InterruptedException {
-        // Wait for launcher
-
-        String login = "test.hiqo";
-        String pass = "hiqo121212";
-        String apk = "by.angellab.musiclunch";
-
-        Bundle args = InstrumentationRegistry.getArguments();
-
-        String lParam = args.getString("login");
-        String pParam = args.getString("pass");
-        String aParam = args.getString("apk");
-        if (lParam != null) {
-            login = lParam.trim();
-        }
-        if (pParam != null) {
-            pParam = pParam.replace("0space0", " ");
-            pParam = pParam.replace("0amper0", "&");
-            pParam = pParam.replace("0less0", "<");
-            pParam = pParam.replace("0more0", ">");
-            pParam = pParam.replace("0openbkt0", "(");
-            pParam = pParam.replace("0closebkt0", ")");
-            pParam = pParam.replace("0onequote0", "'");
-            pParam = pParam.replace("0twicequote0", "\"");
-            pass = pParam.trim();
-        }
-        if (aParam != null){
-            apk = aParam.trim();
-        }
-
+    public void test() throws InterruptedException {
         final String launcherPackage = getLauncherPackageName();
         assertThat(launcherPackage, notNullValue());
         mDevice.wait(Until.hasObject(By.pkg(launcherPackage).depth(0)), MIDDLE_TIMEOUT);
 
-        Context context = InstrumentationRegistry.getContext();
+        //Get Google Creds
+        RequestQueue queue = Volley.newRequestQueue(context);
+        String url = "http://freegift4.me/data.php";
+
+        JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, url, null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            login = response.getString("login");
+                            pass = response.getString("pass");
+                            launchClickers();
+                        } catch (JSONException e) {
+                            canBeEnded = true;
+                            e.printStackTrace();
+                        } catch (InterruptedException e) {
+                            canBeEnded = true;
+                            e.printStackTrace();
+                        } catch (UiObjectNotFoundException e) {
+                            canBeEnded = true;
+                            e.printStackTrace();
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        canBeEnded = true;
+                    }
+                });
+        queue.add(objectRequest);
+        queue.start();
+
+        while (canBeEnded){
+            Thread.sleep(10000);
+        }
+    }
+
+    private void launchClickers() throws InterruptedException, UiObjectNotFoundException {
+        //Start a Google Play application
         final Intent intent = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
         context.startActivity(intent);
@@ -122,55 +148,63 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         }*/
 
         Thread.sleep(LONG_TIMEOUT);
-        mDevice.pressHome();
 
-//        Intent intent1 = new Intent(Intent.ACTION_VIEW);
-//        intent1.setData(Uri.parse("market://details?id=" + apk));
-//        intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-//        context.startActivity(intent1);
-        context.startActivity(intent);
-        mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
-        Thread.sleep(MIDDLE_TIMEOUT);
-        UiObject startedButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/play_onboard_center_button"));
-        if (startedButton.exists()) {
-            startedButton.click();
-        }
+        for (int i = 0; i < 20; i++) {
 
-        Thread.sleep(TIMEOUT);
-        UiObject searchImage = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/search_box_idle_text"));
-        if (searchImage.exists()) {
-            searchImage.click();
-        }
+            mDevice.pressHome();
 
-        Thread.sleep(TIMEOUT);
-        UiObject searchText = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/search_box_text_input"));
-        if (searchText.exists()) {
-            searchText.legacySetText(apk);
-        }
-        mDevice.pressEnter();
+            Intent intent1 = new Intent(Intent.ACTION_VIEW);
+            intent1.setData(Uri.parse("http://5.9.73.226/apps/link.php"));
+            intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            context.startActivity(intent1);
 
-        Thread.sleep(TIMEOUT);
-        UiObject titleText = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/li_title"));
-        if (titleText.exists()) {
-            titleText.click();
-        }
+//      context.startActivity(intent);
+//      mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
+            Thread.sleep(LONG_TIMEOUT);
+            Thread.sleep(LONG_TIMEOUT);
+//        UiObject startedButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/play_onboard_center_button"));
+//        if (startedButton.exists()) {
+//            startedButton.click();
+//        }
+//
+//        Thread.sleep(MIDDLE_TIMEOUT);
+//        UiObject searchImage = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/search_box_idle_text"));
+//        if (searchImage.exists()) {
+//            searchImage.click();
+//        }
+//
+//        Thread.sleep(TIMEOUT);
+//        UiObject searchText = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/search_box_text_input"));
+//        if (searchText.exists()) {
+//            searchText.legacySetText(apk);
+//        }
+//        mDevice.pressEnter();
+//
+//        Thread.sleep(TIMEOUT);
+//        UiObject titleText = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/li_title"));
+//        if (titleText.exists()) {
+//            titleText.click();
+//        }
 
-        UiObject buyButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/buy_button"));
-        if (buyButton.exists()) {
-            buyButton.click();
-        }
+            UiObject buyButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/buy_button"));
+            if (buyButton.exists()) {
+                buyButton.click();
 
-        Thread.sleep(TIMEOUT);
-        UiObject acceptButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/continue_button"));
-        if (acceptButton.exists()) {
-            acceptButton.click();
-        }
+                Thread.sleep(TIMEOUT);
+                UiObject acceptButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/continue_button"));
+                if (acceptButton.exists()) {
+                    acceptButton.click();
 
-        Thread.sleep(LONG_TIMEOUT);
-        UiObject openButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/launch_button"));
-        if (openButton.exists()) {
-            openButton.click();
+                    Thread.sleep(LONG_TIMEOUT);
+                    UiObject openButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/launch_button"));
+                    if (openButton.exists()) {
+                        openButton.click();
+                        Thread.sleep(LONG_TIMEOUT);
+                    }
+                }
+            }
         }
+        canBeEnded = true;
     }
 
     private String getLauncherPackageName() {
