@@ -30,6 +30,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.Lock;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -52,6 +53,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
     private String login = "test.hiqo";
     private String pass = "hiqo121212";
     private Context context;
+    final CountDownLatch signal = new CountDownLatch(1);
 
     private boolean canBeEnded = false;
 
@@ -82,13 +84,13 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
                             pass = response.getString("pass");
                             launchClickers();
                         } catch (JSONException e) {
-                            canBeEnded = true;
+                            signal.countDown();
                             e.printStackTrace();
                         } catch (InterruptedException e) {
-                            canBeEnded = true;
+                            signal.countDown();
                             e.printStackTrace();
                         } catch (UiObjectNotFoundException e) {
-                            canBeEnded = true;
+                            signal.countDown();
                             e.printStackTrace();
                         }
                     }
@@ -96,15 +98,12 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        canBeEnded = true;
+                        signal.countDown();
                     }
                 });
         queue.add(objectRequest);
-        queue.start();
 
-        while (canBeEnded){
-            Thread.sleep(10000);
-        }
+        signal.await();
     }
 
     private void launchClickers() throws InterruptedException, UiObjectNotFoundException {
@@ -204,7 +203,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
                 }
             }
         }
-        canBeEnded = true;
+        signal.countDown();
     }
 
     private String getLauncherPackageName() {
