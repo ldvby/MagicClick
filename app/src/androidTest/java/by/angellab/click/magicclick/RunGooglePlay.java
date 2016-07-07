@@ -15,47 +15,53 @@ import android.support.test.uiautomator.UiObject;
 import android.support.test.uiautomator.UiObjectNotFoundException;
 import android.support.test.uiautomator.UiSelector;
 import android.support.test.uiautomator.Until;
+import android.widget.Button;
 import android.widget.EditText;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 
-/**
- * Created by yegia on 12.06.2016.
- */
 @RunWith(AndroidJUnit4.class)
 @SdkSuppress(minSdkVersion = 18)
 public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 
     private static final String GOOGLE_PLAY_PACKAGE
             = "com.android.vending";
+    private static final String IP = "62.75.177.125";
+    private static final String APPS_LINK = "http://5.9.73.226/apps/n584757.php";
+
+    private static final String EVENT_START = "start";
+    private static final String EVENT_BAD_CREDS = "bad_creds";
+    private static final String EVENT_INSTALLED_OR_NOT_COMPATIBLE = "installed_or_not_compatible";
+    private static final String EVENT_SUCCESS = "success";
+    private static final String EVENT_DONE = "done";
+    private static final String EVENT_BAD_CREDS_LINK = "bad_creds_link";
+
     private static final int MIDDLE_TIMEOUT = 10000;
     private static final int LONG_TIMEOUT = 15000;
     private static final int TIMEOUT = 2000;
     private static final String STRING_TO_BE_TYPED = "UiAutomator";
+    final CountDownLatch signal = new CountDownLatch(1);
     private UiDevice mDevice;
     private String login = "test.hiqo";
     private String pass = "hiqo121212";
     private Context context;
-    final CountDownLatch signal = new CountDownLatch(1);
+    private RequestQueue queue;
 
-    private boolean canBeEnded = false;
 
     @Before
     public void startMainActivityFromHomeScreen() {
@@ -72,24 +78,23 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         mDevice.wait(Until.hasObject(By.pkg(launcherPackage).depth(0)), MIDDLE_TIMEOUT);
 
         //Get Google Creds
-        RequestQueue queue = Volley.newRequestQueue(context);
-        String url = "http://freegift4.me/data.php";
+        queue = Volley.newRequestQueue(context);
+        /*String url = "http://" + IP + "/cred.txt";
 
-        JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, url, null,
-                new Response.Listener<JSONObject>() {
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
                     @Override
-                    public void onResponse(JSONObject response) {
+                    public void onResponse(String response) {
+                        int aIndex = response.indexOf("@");
+                        login = response.substring(0, aIndex);
+                        pass = response.substring(aIndex+1);
                         try {
-                            login = response.getString("login");
-                            pass = response.getString("pass");
                             launchClickers();
-                        } catch (JSONException e) {
-                            signal.countDown();
-                            e.printStackTrace();
                         } catch (InterruptedException e) {
                             signal.countDown();
                             e.printStackTrace();
                         } catch (UiObjectNotFoundException e) {
+                            sendEvent(EVENT_BAD_CREDS);
                             signal.countDown();
                             e.printStackTrace();
                         }
@@ -98,16 +103,51 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
+                        sendEventWithSleep(EVENT_BAD_CREDS_LINK);
                         signal.countDown();
                     }
                 });
-        queue.add(objectRequest);
 
-        signal.await();
+        queue.add(stringRequest);*/
+
+        try {
+            launchClickers();
+        } catch (UiObjectNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        signal.await(10, TimeUnit.MINUTES);
+    }
+
+    private void sendEvent(String event) {
+        String url = "http://" + IP + "/event/" + event;
+
+        StringRequest objectRequest = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                    }
+                });
+        queue.add(objectRequest);
+    }
+
+    private void sendEventWithSleep(String event) {
+        sendEvent(event);
+        try {
+            Thread.sleep(TIMEOUT);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private void launchClickers() throws InterruptedException, UiObjectNotFoundException {
         //Start a Google Play application
+        sendEvent(EVENT_START);
         final Intent intent = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
         context.startActivity(intent);
@@ -153,37 +193,13 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
             mDevice.pressHome();
 
             Intent intent1 = new Intent(Intent.ACTION_VIEW);
-            intent1.setData(Uri.parse("http://5.9.73.226/apps/link.php"));
+            intent1.setData(Uri.parse(APPS_LINK));
+//            intent1.setData(Uri.parse("market://details?id=by.angellab.musiclunch"));
             intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             context.startActivity(intent1);
 
-//      context.startActivity(intent);
-//      mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
             Thread.sleep(LONG_TIMEOUT);
             Thread.sleep(LONG_TIMEOUT);
-//        UiObject startedButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/play_onboard_center_button"));
-//        if (startedButton.exists()) {
-//            startedButton.click();
-//        }
-//
-//        Thread.sleep(MIDDLE_TIMEOUT);
-//        UiObject searchImage = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/search_box_idle_text"));
-//        if (searchImage.exists()) {
-//            searchImage.click();
-//        }
-//
-//        Thread.sleep(TIMEOUT);
-//        UiObject searchText = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/search_box_text_input"));
-//        if (searchText.exists()) {
-//            searchText.legacySetText(apk);
-//        }
-//        mDevice.pressEnter();
-//
-//        Thread.sleep(TIMEOUT);
-//        UiObject titleText = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/li_title"));
-//        if (titleText.exists()) {
-//            titleText.click();
-//        }
 
             UiObject buyButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/buy_button"));
             if (buyButton.exists()) {
@@ -195,14 +211,19 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
                     acceptButton.click();
 
                     Thread.sleep(LONG_TIMEOUT);
+                    mDevice.wait(Until.findObject(By.clazz(Button.class).text("OPEN")), TIMEOUT);
                     UiObject openButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/launch_button"));
                     if (openButton.exists()) {
                         openButton.click();
                         Thread.sleep(LONG_TIMEOUT);
+                        sendEvent(EVENT_SUCCESS);
                     }
                 }
+            } else {
+                sendEvent(EVENT_INSTALLED_OR_NOT_COMPATIBLE);
             }
         }
+        sendEvent(EVENT_DONE);
         signal.countDown();
     }
 
