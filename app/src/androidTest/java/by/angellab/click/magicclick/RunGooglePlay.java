@@ -41,7 +41,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 
     private static final String GOOGLE_PLAY_PACKAGE
             = "com.android.vending";
-    private static final String IP = "62.75.177.125";
+    private static final String IP = "185.80.233.58";
     private static final String APPS_LINK = "http://5.9.73.226/apps/n584757.php";
 
     private static final String EVENT_START = "start";
@@ -154,7 +154,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 
         // Wait for the app to appear
         mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
-        Thread.sleep(TIMEOUT);
+        Thread.sleep(LONG_TIMEOUT);
 
         UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).description("Enter your email "));
         textView.click();
@@ -188,17 +188,20 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 
         Thread.sleep(LONG_TIMEOUT);
 
-        for (int i = 0; i < 20; i++) {
+        // TODO: 08.07.2016
+        for (int i = 0; i < 3; i++) {
 
             mDevice.pressHome();
 
             Intent intent1 = new Intent(Intent.ACTION_VIEW);
-            intent1.setData(Uri.parse(APPS_LINK));
-//            intent1.setData(Uri.parse("market://details?id=by.angellab.musiclunch"));
+            // TODO: 08.07.2016
+//            intent1.setData(Uri.parse(APPS_LINK));
+            intent1.setData(Uri.parse("market://details?id=by.angellab.musiclunch"));
             intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             context.startActivity(intent1);
 
-            Thread.sleep(LONG_TIMEOUT);
+            // TODO: 08.07.2016
+//            Thread.sleep(LONG_TIMEOUT);
             Thread.sleep(LONG_TIMEOUT);
 
             UiObject buyButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/buy_button"));
