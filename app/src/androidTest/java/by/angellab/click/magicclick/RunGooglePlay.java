@@ -160,6 +160,10 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
+                        if (event == EVENT_DONE ||
+                                event == EVENT_BAD_CREDS_LINK){
+                            endSignal.countDown();
+                        }
                     }
                 });
         queue.add(objectRequest);
