@@ -23,6 +23,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
@@ -82,59 +83,78 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 
         //Get Google Creds
         queue = Volley.newRequestQueue(context);
-        /*String url = "http://" + IP + "/cred.txt";
+        String url = "http://" + IP + "/api/getCreds";
+        final User user = new User();
 
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        int aIndex = response.indexOf("@");
-                        login = response.substring(0, aIndex);
-                        pass = response.substring(aIndex+1);
+                        JSONObject jsonResult = null;
                         try {
-                            launchClickers();
-                        } catch (InterruptedException e) {
-                            endSignal.countDown();
+                            jsonResult = new JSONObject(response);
+                            user.setLogin(jsonResult.getString("login"));
+                            user.setPassword(jsonResult.getString("pass"));
+                        } catch (JSONException e) {
                             e.printStackTrace();
-                        } catch (UiObjectNotFoundException e) {
-                            sendEvent(EVENT_BAD_CREDS);
-                            endSignal.countDown();
-                            e.printStackTrace();
+                        }
+
+//                        int aIndex = response.indexOf("@");
+//                        login = response.substring(0, aIndex);
+//                        pass = response.substring(aIndex+1);
+                        if (user!= null && !TextUtils.isEmpty(user.getLogin())) {
+                            try {
+                                launchClickers(user);
+                            } catch (InterruptedException e) {
+                                sendEvent(EVENT_DONE);
+                                e.printStackTrace();
+                            } catch (UiObjectNotFoundException e) {
+                                sendEvent(EVENT_DONE);
+                                e.printStackTrace();
+                            }
+                        } else {
+                            sendEvent(EVENT_DONE);
                         }
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        sendEventWithSleep(EVENT_BAD_CREDS_LINK);
-                        endSignal.countDown();
+                        sendEvent(EVENT_BAD_CREDS_LINK);
                     }
                 });
 
-        queue.add(stringRequest);*/
+        queue.add(stringRequest);
 
-        User user = generateNewUser();
+        //User user = generateNewUser();
 
-        if (user!= null && !TextUtils.isEmpty(user.getLogin())) {
-            try {
-                launchClickers(user);
-            } catch (UiObjectNotFoundException e) {
-                e.printStackTrace();
-            }
-        } else {
-            sendEvent(EVENT_DONE);
-        }
+//        user.setLogin("alexsanderson410");
+//        user.setPassword("qwerty5656");
+
+//        if (user!= null && !TextUtils.isEmpty(user.getLogin())) {
+//            try {
+//                launchClickers(user);
+//            } catch (UiObjectNotFoundException e) {
+//                e.printStackTrace();
+//            }
+//        } else {
+//            sendEvent(EVENT_DONE);
+//        }
 
         endSignal.await(10, TimeUnit.MINUTES);
     }
 
-    private void sendEvent(String event) {
+    private void sendEvent(final String event) {
         String url = "http://" + IP + "/event/" + event;
 
         StringRequest objectRequest = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
+                        if (event == EVENT_DONE ||
+                                event == EVENT_BAD_CREDS_LINK){
+                            endSignal.countDown();
+                        }
                     }
                 },
                 new Response.ErrorListener() {
@@ -198,7 +218,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         Thread.sleep(LONG_TIMEOUT);
 
         // TODO: 08.07.2016
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 1; i++) {
 
             mDevice.pressHome();
 
@@ -236,7 +256,6 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
             }
         }
         sendEvent(EVENT_DONE);
-        endSignal.countDown();
     }
 
     private String getLauncherPackageName() {
@@ -250,40 +269,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         return resolveInfo.activityInfo.packageName;
     }
 
-    private User generateNewUser() throws InterruptedException {
-        final User user = new User();
-
-        StringRequest stringRequest = new StringRequest("http://api.randomuser.me/",
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        JSONObject jsonResult = null;
-                        try {
-                            jsonResult = new JSONObject(response);
-                            JSONObject jsonUser = jsonResult.getJSONArray("results").getJSONObject(0);
-                            user.setFirstName(jsonUser.getJSONObject("name").getString("first"));
-                            user.setLastName(jsonUser.getJSONObject("name").getString("last"));
-                            user.setLogin(jsonUser.getJSONObject("login").getString("username"));
-                            user.setPassword(jsonUser.getJSONObject("login").getString("salt"));
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                        userSignal.countDown();
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        userSignal.countDown();
-                    }
-                });
-
-        queue.add(stringRequest);
-        userSignal.await();
-        return user;
-    }
-
-    private class User {
+    public static class User {
 
         private String firstName;
         private String lastName;
