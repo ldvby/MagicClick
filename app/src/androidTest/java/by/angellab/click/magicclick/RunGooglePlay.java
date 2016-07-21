@@ -197,7 +197,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         context.startActivity(intent);
 
         // Wait for the app to appear
-        //Thread.sleep(LONG_TIMEOUT);
+        Thread.sleep(MIDDLE_TIMEOUT);
         //mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
 
         mDevice.wait(Until.findObject(By.clazz(EditText.class).descContains("Enter your email")), VERY_LONG_TIMEOUT);
@@ -232,6 +232,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         mDevice.wait(Until.findObject(By.desc("ACCEPT")), MIDDLE_TIMEOUT);
         nextButton = mDevice.findObject(new UiSelector().description("ACCEPT"));
         nextButton.click();
+        nextButton.waitUntilGone(VERY_LONG_TIMEOUT);
 
         /*mDevice.wait(Until.findObject(By.desc("NEXT")), MIDDLE_TIMEOUT);
         mDevice.waitForIdle(2000);
@@ -243,8 +244,6 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         if (nextButton != null) {
             nextButton.click();
         }*/
-
-        Thread.sleep(LONG_TIMEOUT);
 
         // TODO: 08.07.2016
         for (int i = 0; i < 1; i++) {
