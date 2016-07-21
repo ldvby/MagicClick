@@ -12,6 +12,7 @@ import android.support.test.uiautomator.By;
 import android.support.test.uiautomator.UiAutomatorInstrumentationTestRunner;
 import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.UiObject;
+import android.support.test.uiautomator.UiObject2;
 import android.support.test.uiautomator.UiObjectNotFoundException;
 import android.support.test.uiautomator.UiSelector;
 import android.support.test.uiautomator.Until;
@@ -23,11 +24,9 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Before;
@@ -56,12 +55,12 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
     private static final String EVENT_DONE = "done";
     private static final String EVENT_BAD_CREDS_LINK = "bad_creds_link";
 
+    private static final int TIMEOUT = 2000;
     private static final int MIDDLE_TIMEOUT = 10000;
     private static final int LONG_TIMEOUT = 15000;
-    private static final int TIMEOUT = 2000;
+    private static final int VERY_LONG_TIMEOUT = 60000;
     private static final String STRING_TO_BE_TYPED = "UiAutomator";
     final CountDownLatch endSignal = new CountDownLatch(1);
-    final CountDownLatch userSignal = new CountDownLatch(1);
     private UiDevice mDevice;
     private Context context;
     private RequestQueue queue;
@@ -83,48 +82,22 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 
         //Get Google Creds
         queue = Volley.newRequestQueue(context);
-        String url = "http://" + IP + "/api/getCreds";
-        final User user = new User();
 
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        JSONObject jsonResult = null;
-                        try {
-                            jsonResult = new JSONObject(response);
-                            user.setLogin(jsonResult.getString("login"));
-                            user.setPassword(jsonResult.getString("pass"));
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
+        final User user = getUserFromServer();
 
-//                        int aIndex = response.indexOf("@");
-//                        login = response.substring(0, aIndex);
-//                        pass = response.substring(aIndex+1);
-                        if (user!= null && !TextUtils.isEmpty(user.getLogin())) {
-                            try {
-                                launchClickers(user);
-                            } catch (InterruptedException e) {
-                                sendEvent(EVENT_DONE);
-                                e.printStackTrace();
-                            } catch (UiObjectNotFoundException e) {
-                                sendEvent(EVENT_DONE);
-                                e.printStackTrace();
-                            }
-                        } else {
-                            sendEvent(EVENT_DONE);
-                        }
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        sendEvent(EVENT_BAD_CREDS_LINK);
-                    }
-                });
-
-        queue.add(stringRequest);
+        if (user!= null && !TextUtils.isEmpty(user.getLogin())) {
+            try {
+                launchClickers(user);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                sendEvent(EVENT_DONE);
+            } catch (UiObjectNotFoundException e) {
+                e.printStackTrace();
+                sendEvent(EVENT_DONE);
+            }
+        } else {
+            sendEvent(EVENT_DONE);
+        }
 
         //User user = generateNewUser();
 
@@ -140,8 +113,46 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 //        } else {
 //            sendEvent(EVENT_DONE);
 //        }
+        endSignal.await(5, TimeUnit.MINUTES);
+    }
 
-        endSignal.await(10, TimeUnit.MINUTES);
+    private User getUserFromServer() throws InterruptedException {
+        final User user = new User();
+        String url = "http://" + IP + "/api/getCreds";
+        final CountDownLatch userSignal = new CountDownLatch(1);
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        JSONObject jsonResult = null;
+                        try {
+                            jsonResult = new JSONObject(response);
+                            String login = jsonResult.getString("login");
+                            user.setLogin(login.substring(0, login.indexOf("@")));
+                            user.setPassword(jsonResult.getString("pass"));
+                            user.setPhone(jsonResult.getString("phone"));
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+//                        int aIndex = response.indexOf("@");
+//                        login = response.substring(0, aIndex);
+//                        pass = response.substring(aIndex+1);
+                        userSignal.countDown();
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        sendEvent(EVENT_BAD_CREDS_LINK);
+                        userSignal.countDown();
+                    }
+                });
+        queue.add(stringRequest);
+
+        userSignal.await();
+        return user;
     }
 
     private void sendEvent(final String event) {
@@ -152,7 +163,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
                     @Override
                     public void onResponse(String response) {
                         if (event == EVENT_DONE ||
-                                event == EVENT_BAD_CREDS_LINK){
+                                event == EVENT_BAD_CREDS_LINK) {
                             endSignal.countDown();
                         }
                     }
@@ -161,7 +172,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         if (event == EVENT_DONE ||
-                                event == EVENT_BAD_CREDS_LINK){
+                                event == EVENT_BAD_CREDS_LINK) {
                             endSignal.countDown();
                         }
                     }
@@ -186,9 +197,10 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         context.startActivity(intent);
 
         // Wait for the app to appear
-        mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
-        Thread.sleep(LONG_TIMEOUT);
+        //Thread.sleep(LONG_TIMEOUT);
+        //mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
 
+        mDevice.wait(Until.findObject(By.clazz(EditText.class).descContains("Enter your email")), VERY_LONG_TIMEOUT);
         UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).description("Enter your email "));
         textView.click();
         textView.legacySetText(user.getLogin());
@@ -203,8 +215,21 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
         nextButton.click();
 
-        mDevice.wait(Until.findObject(By.desc("ACCEPT")), MIDDLE_TIMEOUT);
+        nextButton.waitUntilGone(VERY_LONG_TIMEOUT);
         Thread.sleep(TIMEOUT);
+        //Phone confirmation
+        if (mDevice.hasObject(By.desc("Confirm your recovery phone number"))){
+            mDevice.findObject(new UiSelector().description("Confirm your recovery phone number")).click();
+            mDevice.wait(Until.findObject(By.descContains("Recovery phone").clazz(EditText.class)), MIDDLE_TIMEOUT);
+            UiObject recPhone = mDevice.findObject(new UiSelector().descriptionContains("Recovery phone").className(EditText.class));
+            recPhone.click();
+            recPhone.legacySetText(user.getPhone());
+            nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
+            nextButton.click();
+            Thread.sleep(MIDDLE_TIMEOUT);
+        }
+
+        mDevice.wait(Until.findObject(By.desc("ACCEPT")), MIDDLE_TIMEOUT);
         nextButton = mDevice.findObject(new UiSelector().description("ACCEPT"));
         nextButton.click();
 
