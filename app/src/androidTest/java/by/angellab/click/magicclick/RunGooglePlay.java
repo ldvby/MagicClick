@@ -233,6 +233,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         nextButton = mDevice.findObject(new UiSelector().description("ACCEPT"));
         nextButton.click();
         nextButton.waitUntilGone(VERY_LONG_TIMEOUT);
+        Thread.sleep(TIMEOUT);
 
         /*mDevice.wait(Until.findObject(By.desc("NEXT")), MIDDLE_TIMEOUT);
         mDevice.waitForIdle(2000);
