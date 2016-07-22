@@ -12,13 +12,14 @@ import android.support.test.uiautomator.By;
 import android.support.test.uiautomator.UiAutomatorInstrumentationTestRunner;
 import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.UiObject;
-import android.support.test.uiautomator.UiObject2;
 import android.support.test.uiautomator.UiObjectNotFoundException;
+import android.support.test.uiautomator.UiScrollable;
 import android.support.test.uiautomator.UiSelector;
 import android.support.test.uiautomator.Until;
 import android.text.TextUtils;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -45,6 +46,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 
     private static final String GOOGLE_PLAY_PACKAGE
             = "com.android.vending";
+    private static final String SETTINGS_PACKAGE = "com.android.settings";
     private static final String IP = "185.80.233.58";
     private static final String APPS_LINK = "http://5.9.73.226/apps/n584757.php";
 
@@ -85,7 +87,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
 
         final User user = getUserFromServer();
 
-        if (user!= null && !TextUtils.isEmpty(user.getLogin())) {
+        if (user != null && !TextUtils.isEmpty(user.getLogin())) {
             try {
                 launchClickers(user);
             } catch (InterruptedException e) {
@@ -190,13 +192,41 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
     }
 
     private void launchClickers(User user) throws InterruptedException, UiObjectNotFoundException {
-        //Start a Google Play application
         sendEvent(EVENT_START);
-        final Intent intent = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
+
+        //Clear settings
+        Intent intent = context.getPackageManager().getLaunchIntentForPackage(SETTINGS_PACKAGE);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
+        context.startActivity(intent);
+
+        mDevice.wait(Until.hasObject(By.pkg(SETTINGS_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
+        UiScrollable settingsScroll = new UiScrollable(new UiSelector().scrollable(true));
+
+        settingsScroll.scrollTextIntoView("Apps");
+        UiObject appsItem = mDevice.findObject(new UiSelector().text("Apps"));
+        appsItem.clickAndWaitForNewWindow();
+        mDevice.swipe(mDevice.getDisplayWidth() - 10, mDevice.getDisplayHeight() / 2,
+                10, mDevice.getDisplayHeight() / 2, 10);
+        mDevice.swipe(mDevice.getDisplayWidth() - 10, mDevice.getDisplayHeight() / 2,
+                10, mDevice.getDisplayHeight() / 2, 10);
+        mDevice.findObject(new UiSelector().description("More options").className(ImageButton.class)).click();
+        Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("Sort by size")).click();
+        Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("Google Play services")).click();
+        Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("Force stop")).click();
+        Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("OK").className(Button.class)).click();
+        Thread.sleep(TIMEOUT);
+
+        //Start a Google Play application
+        intent = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
         context.startActivity(intent);
 
         // Wait for the app to appear
+        Thread.sleep(MIDDLE_TIMEOUT);
         Thread.sleep(MIDDLE_TIMEOUT);
         //mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
 
@@ -218,7 +248,7 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         nextButton.waitUntilGone(VERY_LONG_TIMEOUT);
         Thread.sleep(TIMEOUT);
         //Phone confirmation
-        if (mDevice.hasObject(By.desc("Confirm your recovery phone number"))){
+        if (mDevice.hasObject(By.desc("Confirm your recovery phone number"))) {
             mDevice.findObject(new UiSelector().description("Confirm your recovery phone number")).click();
             mDevice.wait(Until.findObject(By.descContains("Recovery phone").clazz(EditText.class)), MIDDLE_TIMEOUT);
             UiObject recPhone = mDevice.findObject(new UiSelector().descriptionContains("Recovery phone").className(EditText.class));
