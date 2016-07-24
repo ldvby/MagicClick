@@ -219,6 +219,12 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         Thread.sleep(TIMEOUT);
         mDevice.findObject(new UiSelector().text("OK").className(Button.class)).click();
         Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("Manage space").className(Button.class)).clickAndWaitForNewWindow();
+        mDevice.findObject(new UiSelector().text("Clear all data").className(Button.class)).click();
+        Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("OK").className(Button.class)).click();
+        Thread.sleep(TIMEOUT);
+
 
         //Start a Google Play application
         intent = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
@@ -231,15 +237,15 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
         //mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
 
         mDevice.wait(Until.findObject(By.clazz(EditText.class).descContains("Enter your email")), VERY_LONG_TIMEOUT);
-        UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).description("Enter your email "));
+        UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).descriptionContains("Enter your email"));
         textView.click();
         textView.legacySetText(user.getLogin());
         UiObject nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
         nextButton.click();
 
-        mDevice.wait(Until.findObject(By.desc("Password ")), MIDDLE_TIMEOUT);
+        mDevice.wait(Until.findObject(By.descContains("Password").clazz(EditText.class)), MIDDLE_TIMEOUT);
         Thread.sleep(TIMEOUT);
-        textView = mDevice.findObject(new UiSelector().className(EditText.class).description("Password "));
+        textView = mDevice.findObject(new UiSelector().className(EditText.class)/*.descriptionContains("Password")*/);
         textView.click();
         textView.legacySetText(user.getPassword());
         nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
