@@ -20,6 +20,7 @@ import android.text.TextUtils;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.TextView;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -194,82 +195,76 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
     private void launchClickers(User user) throws InterruptedException, UiObjectNotFoundException {
         sendEvent(EVENT_START);
 
-        //Clear settings
-        Intent intent = context.getPackageManager().getLaunchIntentForPackage(SETTINGS_PACKAGE);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
-        context.startActivity(intent);
 
-        mDevice.wait(Until.hasObject(By.pkg(SETTINGS_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
-        UiScrollable settingsScroll = new UiScrollable(new UiSelector().scrollable(true));
+        for (int i = 0; i < 3; i++) {
+            //Start a Google Play application
+            Intent intentGP = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
+            intentGP.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
+            context.startActivity(intentGP);
 
-        settingsScroll.scrollTextIntoView("Apps");
-        UiObject appsItem = mDevice.findObject(new UiSelector().text("Apps"));
-        appsItem.clickAndWaitForNewWindow();
-        mDevice.swipe(mDevice.getDisplayWidth() - 10, mDevice.getDisplayHeight() / 2,
-                10, mDevice.getDisplayHeight() / 2, 10);
-        mDevice.swipe(mDevice.getDisplayWidth() - 10, mDevice.getDisplayHeight() / 2,
-                10, mDevice.getDisplayHeight() / 2, 10);
-        mDevice.findObject(new UiSelector().description("More options").className(ImageButton.class)).click();
-        Thread.sleep(TIMEOUT);
-        mDevice.findObject(new UiSelector().text("Sort by size")).click();
-        Thread.sleep(TIMEOUT);
-        mDevice.findObject(new UiSelector().text("Google Play services")).click();
-        Thread.sleep(TIMEOUT);
-        mDevice.findObject(new UiSelector().text("Force stop")).click();
-        Thread.sleep(TIMEOUT);
-        mDevice.findObject(new UiSelector().text("OK").className(Button.class)).click();
-        Thread.sleep(TIMEOUT);
-        mDevice.findObject(new UiSelector().text("Manage space").className(Button.class)).clickAndWaitForNewWindow();
-        mDevice.findObject(new UiSelector().text("Clear all data").className(Button.class)).click();
-        Thread.sleep(TIMEOUT);
-        mDevice.findObject(new UiSelector().text("OK").className(Button.class)).click();
-        Thread.sleep(TIMEOUT);
+            // Wait for the app to appear
+            Thread.sleep(MIDDLE_TIMEOUT);
+            Thread.sleep(MIDDLE_TIMEOUT);
+
+            mDevice.wait(Until.findObject(By.clazz(TextView.class).descContains("Checking info")), VERY_LONG_TIMEOUT);
+            mDevice.findObject(new UiSelector().className(TextView.class).descriptionContains("Checking info")).waitUntilGone(VERY_LONG_TIMEOUT);
+            Thread.sleep(TIMEOUT);
+
+            mDevice.wait(Until.findObject(By.clazz(EditText.class).descContains("Enter your email")), VERY_LONG_TIMEOUT);
+            UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).descriptionContains("Enter your email"));
+
+            if (textView.exists()){
 
 
-        //Start a Google Play application
-        intent = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
-        context.startActivity(intent);
 
-        // Wait for the app to appear
-        Thread.sleep(MIDDLE_TIMEOUT);
-        Thread.sleep(MIDDLE_TIMEOUT);
-        //mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
 
-        mDevice.wait(Until.findObject(By.clazz(EditText.class).descContains("Enter your email")), VERY_LONG_TIMEOUT);
-        UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).descriptionContains("Enter your email"));
-        textView.click();
-        textView.legacySetText(user.getLogin());
-        UiObject nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
-        nextButton.click();
+            }
 
-        mDevice.wait(Until.findObject(By.descContains("Password").clazz(EditText.class)), MIDDLE_TIMEOUT);
-        Thread.sleep(TIMEOUT);
-        textView = mDevice.findObject(new UiSelector().className(EditText.class)/*.descriptionContains("Password")*/);
-        textView.click();
-        textView.legacySetText(user.getPassword());
-        nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
-        nextButton.click();
+            //Start a Google Play application
+            intentGP = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
+            intentGP.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
+            context.startActivity(intentGP);
 
-        nextButton.waitUntilGone(VERY_LONG_TIMEOUT);
-        Thread.sleep(TIMEOUT);
-        //Phone confirmation
-        if (mDevice.hasObject(By.desc("Confirm your recovery phone number"))) {
-            mDevice.findObject(new UiSelector().description("Confirm your recovery phone number")).click();
-            mDevice.wait(Until.findObject(By.descContains("Recovery phone").clazz(EditText.class)), MIDDLE_TIMEOUT);
-            UiObject recPhone = mDevice.findObject(new UiSelector().descriptionContains("Recovery phone").className(EditText.class));
-            recPhone.click();
-            recPhone.legacySetText(user.getPhone());
+            // Wait for the app to appear
+            Thread.sleep(MIDDLE_TIMEOUT);
+            Thread.sleep(MIDDLE_TIMEOUT);
+            //mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
+
+            mDevice.wait(Until.findObject(By.clazz(EditText.class).descContains("Enter your email")), VERY_LONG_TIMEOUT);
+            UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).descriptionContains("Enter your email"));
+            textView.click();
+            textView.legacySetText(user.getLogin());
+            UiObject nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
+            nextButton.click();
+
+            mDevice.wait(Until.findObject(By.descContains("Password").clazz(EditText.class)), MIDDLE_TIMEOUT);
+            Thread.sleep(TIMEOUT);
+            textView = mDevice.findObject(new UiSelector().className(EditText.class)/*.descriptionContains("Password")*/);
+            textView.click();
+            textView.legacySetText(user.getPassword());
             nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
             nextButton.click();
-            Thread.sleep(MIDDLE_TIMEOUT);
-        }
 
-        mDevice.wait(Until.findObject(By.desc("ACCEPT")), MIDDLE_TIMEOUT);
-        nextButton = mDevice.findObject(new UiSelector().description("ACCEPT"));
-        nextButton.click();
-        nextButton.waitUntilGone(VERY_LONG_TIMEOUT);
-        Thread.sleep(TIMEOUT);
+            nextButton.waitUntilGone(VERY_LONG_TIMEOUT);
+            Thread.sleep(TIMEOUT);
+            //Phone confirmation
+            if (mDevice.hasObject(By.desc("Confirm your recovery phone number"))) {
+                mDevice.findObject(new UiSelector().description("Confirm your recovery phone number")).click();
+                mDevice.wait(Until.findObject(By.descContains("Recovery phone").clazz(EditText.class)), MIDDLE_TIMEOUT);
+                UiObject recPhone = mDevice.findObject(new UiSelector().descriptionContains("Recovery phone").className(EditText.class));
+                recPhone.click();
+                recPhone.legacySetText(user.getPhone());
+                nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
+                nextButton.click();
+                Thread.sleep(MIDDLE_TIMEOUT);
+            }
+
+            mDevice.wait(Until.findObject(By.desc("ACCEPT")), MIDDLE_TIMEOUT);
+            nextButton = mDevice.findObject(new UiSelector().description("ACCEPT"));
+            nextButton.click();
+            nextButton.waitUntilGone(VERY_LONG_TIMEOUT);
+            Thread.sleep(TIMEOUT);
+
 
         /*mDevice.wait(Until.findObject(By.desc("NEXT")), MIDDLE_TIMEOUT);
         mDevice.waitForIdle(2000);
@@ -321,6 +316,39 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
             }
         }
         sendEvent(EVENT_DONE);
+    }
+
+    private void resetSettings() throws UiObjectNotFoundException, InterruptedException {
+        //Clear settings
+        Intent intentSettings = context.getPackageManager().getLaunchIntentForPackage(SETTINGS_PACKAGE);
+        intentSettings.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
+        context.startActivity(intentSettings);
+
+        mDevice.wait(Until.hasObject(By.pkg(SETTINGS_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
+        UiScrollable settingsScroll = new UiScrollable(new UiSelector().scrollable(true));
+
+        settingsScroll.scrollTextIntoView("Apps");
+        UiObject appsItem = mDevice.findObject(new UiSelector().text("Apps"));
+        appsItem.clickAndWaitForNewWindow();
+        mDevice.swipe(mDevice.getDisplayWidth() - 10, mDevice.getDisplayHeight() / 2,
+                10, mDevice.getDisplayHeight() / 2, 10);
+        mDevice.swipe(mDevice.getDisplayWidth() - 10, mDevice.getDisplayHeight() / 2,
+                10, mDevice.getDisplayHeight() / 2, 10);
+        mDevice.findObject(new UiSelector().description("More options").className(ImageButton.class)).click();
+        Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("Sort by size")).click();
+        Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("Google Play services")).click();
+        Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("Force stop")).click();
+        Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("OK").className(Button.class)).click();
+        Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("Manage space").className(Button.class)).clickAndWaitForNewWindow();
+        mDevice.findObject(new UiSelector().text("Clear all data").className(Button.class)).click();
+        Thread.sleep(TIMEOUT);
+        mDevice.findObject(new UiSelector().text("OK").className(Button.class)).click();
+        Thread.sleep(TIMEOUT);
     }
 
     private String getLauncherPackageName() {
